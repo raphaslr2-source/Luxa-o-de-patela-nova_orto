@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Luxação de patela em 3D: guia para tutores</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --paper:#f3f6f5; --panel:#fbfcfc; --ink:#15232c; --muted:#56666f; --line:#d5dfdd;
+  --teal:#0c7c7a; --teal-ink:#ffffff; --teal-soft:#e0efed;
+  --gold:#e9a126; --coral:#e5533d; --mint:#3fbf82; --chip:#eaf0ef;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0f171c; --panel:#121c22; --ink:#e6eeec; --muted:#93a4a8; --line:#24333a;
+    --teal:#3cc0b9; --teal-ink:#06201f; --teal-soft:#16302f; --chip:#1a262c;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0f171c; --panel:#121c22; --ink:#e6eeec; --muted:#93a4a8; --line:#24333a;
+  --teal:#3cc0b9; --teal-ink:#06201f; --teal-soft:#16302f; --chip:#1a262c;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;height:100%;background:var(--paper);color:var(--ink);
+  font-family:Figtree,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.55}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+.app{display:grid;grid-template-columns:minmax(0,1fr) 410px;height:100%}
+@media (max-width:880px){.app{grid-template-columns:1fr;grid-template-rows:58% 42%}}
+
+/* ---------- visor 3D ---------- */
+.viewer{position:relative;overflow:hidden;min-height:0;
+  background:radial-gradient(ellipse 75% 70% at 50% 45%,#16181b 0%,#07080a 60%,#000 100%)}
+.loading{position:absolute;inset:0;display:grid;place-items:center;color:#cfd8da;font-size:14px;letter-spacing:.02em;background:#000;transition:opacity .6s;z-index:5}
+.loading.done{opacity:0;pointer-events:none}
+.tag.mus span{background:rgba(110,24,22,.88);border-color:rgba(255,160,150,.3)}
+#c{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+#c:active{cursor:grabbing}
+.labels{position:absolute;inset:0;pointer-events:none;transition:opacity .3s}
+.tag{position:absolute;left:0;top:0;will-change:transform;transition:opacity .2s}
+.tag i{position:absolute;left:-3.5px;top:-3.5px;width:7px;height:7px;border-radius:50%;background:#f4f7f6;box-shadow:0 0 0 3px rgba(12,20,26,.55)}
+.tag span{position:absolute;top:-12px;white-space:nowrap;font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:6px;
+  background:rgba(10,20,26,.78);color:#eef3f1;border:1px solid rgba(255,255,255,.12)}
+.tag.r span{left:12px}.tag.l span{right:12px}
+.tag.pat span{background:#e9a126;color:#1e1404;border-color:transparent}
+.tag.side i{display:none}
+.tag.side span{transform:translateX(-50%);left:0;background:transparent;border:0;color:rgba(214,232,236,.5);font-weight:700;font-size:11px;letter-spacing:.08em}
+
+.topbar{position:absolute;top:12px;left:12px;right:12px;display:flex;gap:10px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;pointer-events:none}
+.topbar>*{pointer-events:auto}
+.status{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;font-weight:600;font-size:13.5px;
+  background:rgba(10,20,26,.8);color:#eef3f1;border:1px solid rgba(255,255,255,.1)}
+.status b{width:10px;height:10px;border-radius:50%;background:var(--mint);box-shadow:0 0 10px var(--mint)}
+.status.out b{background:var(--coral);box-shadow:0 0 10px var(--coral)}
+.views{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;background:rgba(10,20,26,.8);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:4px}
+.vbtn{border:0;background:transparent;color:#c8d6d9;padding:6px 10px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.vbtn:hover{background:rgba(255,255,255,.08);color:#fff}
+.vbtn.on{background:#e9f2f1;color:#0f1d24}
+.vsep{width:1px;background:rgba(255,255,255,.14);margin:4px 3px}
+.caption{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);max-width:min(92%,560px);text-align:center;
+  padding:10px 16px;border-radius:10px;background:rgba(10,20,26,.86);color:#f2f6f5;font-size:15.5px;font-weight:500;
+  border:1px solid rgba(255,255,255,.12);transition:opacity .35s}
+.caption:empty{opacity:0}
+.hint{position:absolute;left:14px;bottom:14px;font-size:12px;color:rgba(214,232,236,.6);transition:opacity .5s}
+.nogl{position:absolute;inset:0;display:grid;place-items:center;color:#dfe9ea;padding:24px;text-align:center}
+
+/* ---------- painel ---------- */
+.panel{overflow-y:auto;background:var(--panel);border-left:1px solid var(--line);padding:26px 24px 30px}
+@media (max-width:880px){.panel{border-left:0;border-top:1px solid var(--line);padding:18px 18px 26px}}
+.brandline{font-size:12.5px;color:var(--muted);margin:0 0 6px}
+h1{font-family:"Bricolage Grotesque",Figtree,system-ui,sans-serif;font-weight:700;font-size:30px;line-height:1.08;margin:0 0 8px;letter-spacing:-.01em}
+.lede{color:var(--muted);margin:0 0 18px;font-size:15.5px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;background:var(--chip);padding:3px;border-radius:10px;margin-bottom:20px}
+.tabs button{border:0;background:transparent;padding:9px 4px;border-radius:8px;font-weight:600;font-size:13.5px;cursor:pointer;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+h2{font-family:"Bricolage Grotesque",Figtree,system-ui,sans-serif;font-size:20px;font-weight:700;margin:0 0 8px;line-height:1.2}
+h3{font-size:17px;margin:0 0 4px}
+p{margin:0 0 12px}
+.pane[hidden]{display:none}
+strong.pt{color:var(--gold)}
+.callout{border-left:3px solid var(--teal);background:var(--teal-soft);padding:11px 14px;border-radius:0 8px 8px 0;margin:14px 0}
+.legend{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:7px;font-size:14px}
+.legend li{display:flex;align-items:center;gap:10px}
+.sw{width:22px;height:10px;border-radius:3px;flex:none}
+.sw.dash{height:0;border-top:2px dashed var(--mint);border-radius:0}
+.sw.line{height:3px;background:var(--coral)}
+
+.grades{display:grid;grid-template-columns:1.4fr repeat(4,1fr);gap:6px;margin:4px 0 16px}
+.grades button{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:10px 0;font-weight:700;font-size:15px;cursor:pointer}
+.grades button[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:var(--teal-ink)}
+.gcard dl{margin:10px 0 0}
+.gcard dt{font-weight:700;font-size:13px;color:var(--teal);margin-top:12px}
+.gcard dd{margin:2px 0 0}
+.note{font-size:13px;color:var(--muted);margin-top:16px}
+
+.ctrl{margin:14px 0}
+.ctrl label{display:flex;justify-content:space-between;font-weight:600;font-size:14px;margin-bottom:4px}
+.ctrl output{color:var(--teal);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--teal)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.seg button{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:7px 0;font-weight:600;font-size:13.5px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:var(--teal-ink)}
+.meter{margin:18px 0 6px}
+.meter .bar{position:relative;height:12px;border-radius:6px;background:var(--chip);overflow:visible}
+.meter .fill{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:var(--mint);transition:background .3s}
+.meter .fill.out{background:var(--coral)}
+.meter .mark{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--ink)}
+.meter .cap{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:6px}
+
+.actions{display:flex;gap:8px;margin:14px 0 16px;flex-wrap:wrap}
+.btn{border:1px solid var(--teal);background:var(--teal);color:var(--teal-ink);padding:9px 14px;border-radius:8px;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--teal)}
+.steps{list-style:none;padding:0;margin:0;display:grid;gap:10px;counter-reset:s}
+.step{border:1px solid var(--line);border-radius:10px;padding:12px 14px;counter-increment:s;transition:border-color .3s,background .3s}
+.step.on{border-color:var(--teal);background:var(--teal-soft)}
+.step head{display:block}
+.step .row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.step h3::before{content:counter(s) ". ";color:var(--teal)}
+.step p{margin:4px 0 0;font-size:14px;color:var(--muted)}
+.step button{flex:none;border:1px solid var(--teal);background:transparent;color:var(--teal);border-radius:7px;padding:5px 11px;font-weight:700;font-size:13px;cursor:pointer}
+.step.on button{background:var(--teal);color:var(--teal-ink)}
+footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="viewer" id="viewer" aria-label="Modelo 3D do joelho">
+    <canvas id="c"></canvas>
+    <div class="labels" id="labels"></div>
+    <div class="topbar">
+      <div class="status" id="status" role="status"><b></b><span>Patela no sulco</span></div>
+      <div class="views">
+        <button class="vbtn on" data-view="joelho">Joelho</button>
+        <button class="vbtn" data-view="frente">Frente</button>
+        <button class="vbtn" data-view="lado">Lado</button>
+        <button class="vbtn" data-view="membro">Membro todo</button>
+        <span class="vsep"></span>
+        <button class="vbtn" id="tgMus" aria-pressed="false">Músculos</button>
+        <button class="vbtn on" id="tgNames" aria-pressed="true">Nomes</button>
+        <button class="vbtn on" id="tgMove" aria-pressed="true">Movimento</button>
+      </div>
+    </div>
+    <div class="caption" id="caption"></div>
+    <div class="loading" id="loading">Reconstruindo o modelo 3D…</div>
+    <div class="hint" id="hint">Arraste para girar · role ou pince para aproximar</div>
+  </section>
+
+  <aside class="panel">
+    <p class="brandline">Dr. Raphael Lira Lourenço · N.O.V.A. Ortopedia e Neurocirurgia Veterinária</p>
+    <h1>Luxação de patela</h1>
+    <p class="lede">Entenda o que acontece no joelho do seu pet, o que significa cada grau e como a cirurgia corrige o problema.</p>
+
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-mode="anat">Joelho</button>
+      <button role="tab" aria-selected="false" data-mode="grau">Graus</button>
+      <button role="tab" aria-selected="false" data-mode="desvio">Desvios</button>
+      <button role="tab" aria-selected="false" data-mode="trat">Tratamento</button>
+    </nav>
+
+    <div class="pane" data-pane="anat">
+      <h2>Como o joelho funciona</h2>
+      <p>O joelho funciona como uma roldana. O <strong>quadríceps</strong>, o músculo da coxa, puxa a <strong class="pt">patela</strong>, que desliza dentro de um trilho no fêmur chamado <strong>sulco troclear</strong>. A força segue pelo <strong>ligamento patelar</strong> até a <strong>tíbia</strong>, e é isso que estica a perna.</p>
+      <p>Para funcionar bem, tudo precisa estar em linha reta: músculo, patela, sulco e o ponto onde o ligamento se prende na tíbia.</p>
+      <div class="callout"><b>Luxação de patela</b> é quando a patela escapa desse trilho. Em cães pequenos ela costuma escapar para dentro (luxação medial). Em raças grandes, pode escapar para fora (luxação lateral).</div>
+      <ul class="legend">
+        <li><span class="sw" style="background:#efe3c9"></span>Osso</li>
+        <li><span class="sw" style="background:#e9a126"></span>Patela</li>
+        <li><span class="sw" style="background:#c4453b"></span>Quadríceps</li>
+        <li><span class="sw" style="background:#f6f0e2;border:1px solid var(--line)"></span>Ligamento patelar</li>
+        <li><span class="sw" style="background:#9fd0e6"></span>Cartilagem do sulco</li>
+      </ul>
+    </div>
+
+    <div class="pane" data-pane="grau" hidden>
+      <h2>Os quatro graus</h2>
+      <p>A classificação vai de I a IV e é feita no exame físico. Escolha um grau para ver a animação.</p>
+      <div class="grades" id="grades">
+        <button data-g="0" aria-pressed="false">Normal</button>
+        <button data-g="1" aria-pressed="true">I</button>
+        <button data-g="2" aria-pressed="false">II</button>
+        <button data-g="3" aria-pressed="false">III</button>
+        <button data-g="4" aria-pressed="false">IV</button>
+      </div>
+      <div class="gcard" id="gcard"></div>
+      <p class="note">A seta branca no modelo representa a pressão feita com a mão durante o exame. Cada caso é avaliado individualmente.</p>
+    </div>
+
+    <div class="pane" data-pane="desvio" hidden>
+      <h2>Por que a patela sai do lugar?</h2>
+      <p>Na maioria dos casos o problema não está só na patela, e sim no alinhamento dos ossos. Quando o fêmur ou a tíbia crescem tortos, a linha de força do quadríceps deixa de passar pelo meio do sulco e puxa a patela para o lado, como um elástico esticado entre dois pontos fora do eixo.</p>
+      <div class="ctrl">
+        <label for="sVarus">Fêmur curvado (varo femoral) <output id="oVarus">0°</output></label>
+        <input type="range" id="sVarus" min="0" max="20" step="1" value="0">
+      </div>
+      <div class="ctrl">
+        <label for="sTors">Tíbia torcida (crista tibial desviada) <output id="oTors">0°</output></label>
+        <input type="range" id="sTors" min="0" max="25" step="1" value="0">
+      </div>
+      <div class="ctrl">
+        <label>Profundidade do sulco</label>
+        <div class="seg" id="segDepth">
+          <button data-d="0.07" aria-pressed="true">Normal</button>
+          <button data-d="0.03" aria-pressed="false">Raso</button>
+          <button data-d="0.005" aria-pressed="false">Plano</button>
+        </div>
+      </div>
+      <div class="meter">
+        <div class="bar"><div class="fill" id="mFill"></div><div class="mark" id="mMark"></div></div>
+        <div class="cap"><span>Puxão lateral sobre a patela</span><span>| limite que o sulco segura</span></div>
+      </div>
+      <ul class="legend">
+        <li><span class="sw line"></span>Linha de força do quadríceps</li>
+        <li><span class="sw dash"></span>Alinhamento ideal</li>
+      </ul>
+      <div class="callout">Pense num trem no trilho: se o trilho entorta (ossos desviados) ou fica raso (sulco pouco profundo), o trem descarrila. Quanto maior o desvio, maior o grau.</div>
+    </div>
+
+    <div class="pane" data-pane="trat" hidden>
+      <h2>Como a cirurgia corrige</h2>
+      <p>O objetivo é devolver a patela ao trilho e mantê-la lá: realinhar a linha de força e, quando necessário, aprofundar o sulco. As técnicas são combinadas de acordo com o grau e os desvios de cada paciente.</p>
+      <p style="color:var(--muted);font-size:14px">Paciente do exemplo: luxação medial grau III, com fêmur curvado e tíbia torcida.</p>
+      <div class="actions">
+        <button class="btn" id="btnSeq">Ver a cirurgia completa</button>
+        <button class="btn ghost" id="btnReset">Recomeçar</button>
+      </div>
+      <ol class="steps" id="steps">
+        <li class="step" data-k="dfo"><div class="row"><h3>Correção do fêmur</h3><button>Aplicar</button></div>
+          <p>Osteotomia femoral: quando o fêmur está curvado, retira-se uma pequena cunha de osso para deixá-lo reto. O osso é fixado com placa e parafusos até cicatrizar.</p></li>
+        <li class="step" data-k="ttt"><div class="row"><h3>Transposição da tuberosidade tibial</h3><button>Aplicar</button></div>
+          <p>O ponto onde o ligamento da patela se prende na tíbia é deslocado para a posição correta e fixado com pinos. Isso coloca a linha de força de volta no eixo.</p></li>
+        <li class="step" data-k="troc"><div class="row"><h3>Aprofundamento do sulco</h3><button>Aplicar</button></div>
+          <p>Trocleoplastia: o sulco raso é aprofundado, preservando a cartilagem, para a patela ter um trilho onde encaixar.</p></li>
+        <li class="step" data-k="tec"><div class="row"><h3>Ajuste dos tecidos moles</h3><button>Aplicar</button></div>
+          <p>A cápsula do joelho é reforçada do lado oposto ao da luxação e liberada do lado que está puxando, equilibrando as forças.</p></li>
+      </ol>
+      <div class="callout">Depois da cirurgia, repouso controlado e fisioterapia fazem parte do tratamento e são essenciais para um bom resultado.</div>
+    </div>
+
+    <footer>Material educativo para tutores. Não substitui a avaliação do médico-veterinário.</footer>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+setTimeout(function(){
+"use strict";
+const viewer=document.getElementById('viewer');
+const canvas=document.getElementById('c');
+if(!window.THREE){viewer.insertAdjacentHTML('beforeend','<div class="nogl">Não foi possível carregar o modelo 3D. Verifique a conexão e recarregue a página.</div>');return;}
+
+const V=THREE.Vector3, UP=new V(0,1,0), D2R=Math.PI/180;
+const reduceMotion=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let renderer;
+try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});}
+catch(e){viewer.insertAdjacentHTML('beforeend','<div class="nogl">Este navegador não conseguiu exibir gráficos 3D.</div>');return;}
+renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.0;
+
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(32,1,0.05,100);
+camera.position.set(1.9,1.0,4.3);
+const controls=new THREE.OrbitControls(camera,canvas);
+controls.target.set(0,0.25,0.05);
+controls.enableDamping=true;controls.dampingFactor=0.08;
+controls.minDistance=1.8;controls.maxDistance=16;
+
+// iluminação no estilo de reconstrução 3D de tomografia
+scene.add(new THREE.HemisphereLight(0xfff4e2,0x0d0b09,0.42));
+scene.add(camera);
+const headL=new THREE.DirectionalLight(0xfff8ee,1.3);headL.position.set(0.7,1.0,0.3);camera.add(headL);headL.target.position.set(0,0,-1);camera.add(headL.target);
+const key=new THREE.DirectionalLight(0xffffff,0.5);key.position.set(3,5,5);scene.add(key);
+const rim=new THREE.DirectionalLight(0xbcd6ff,0.5);rim.position.set(-4,2,-5);scene.add(rim);
+
+function fiberTex(){
+  const c=document.createElement('canvas');c.width=128;c.height=256;const x=c.getContext('2d');
+  x.fillStyle='#8a2a26';x.fillRect(0,0,128,256);
+  for(let i=0;i<110;i++){const px=Math.random()*128,w=0.6+Math.random()*2.4;
+    x.fillStyle='rgba('+(150+Math.random()*80|0)+','+(38+Math.random()*34|0)+','+(34+Math.random()*26|0)+','+(0.2+Math.random()*0.45).toFixed(2)+')';x.fillRect(px,0,w,256);}
+  for(let i=0;i<45;i++){x.fillStyle='rgba(50,8,8,0.28)';x.fillRect(Math.random()*128,0,0.8,256);}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(3,1);t.encoding=THREE.sRGBEncoding;return t;
+}
+const FIB=fiberTex();
+const M={
+  bone:new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.52,metalness:0}),
+  cart:new THREE.MeshStandardMaterial({color:0xb9d8e6,roughness:0.22,metalness:0,emissive:0x000000,transparent:true,opacity:0.88}),
+  pat:new THREE.MeshStandardMaterial({vertexColors:true,color:0xffc27a,roughness:0.48,emissive:0x3a1c00,emissiveIntensity:0.55}),
+  quad:new THREE.MeshStandardMaterial({map:FIB,roughness:0.5,transparent:true,opacity:0.72,depthWrite:false}),
+  tendon:new THREE.MeshStandardMaterial({color:0xf3eee2,roughness:0.3,metalness:0.05}),
+  plate:new THREE.MeshStandardMaterial({color:0xaab6bf,roughness:0.28,metalness:0.85,transparent:true,opacity:0}),
+  pin:new THREE.MeshStandardMaterial({color:0xaab6bf,roughness:0.28,metalness:0.85,transparent:true,opacity:0}),
+  wedge:new THREE.MeshStandardMaterial({color:0xff4d3d,roughness:0.5,transparent:true,opacity:0,depthWrite:false,emissive:0x660000}),
+  band:new THREE.MeshStandardMaterial({color:0x5fb3ff,roughness:0.4,transparent:true,opacity:0,depthWrite:false,emissive:0x0a2a55})
+};
+
+const SPH=new THREE.SphereGeometry(1,40,28);
+const _d=new V();
+function ell(rx,ry,rz,mat,x,y,z,parent){const m=new THREE.Mesh(SPH,mat);m.scale.set(rx,ry,rz);m.position.set(x,y,z);parent.add(m);return m;}
+function setSeg(m,a,b){_d.subVectors(b,a);const L=_d.length()||1e-4;m.position.copy(a).addScaledVector(_d,0.5);m.scale.set(1,L,1);m.quaternion.setFromUnitVectors(UP,_d.multiplyScalar(1/L));}
+function seg(a,b,r1,r2,mat,parent){const m=new THREE.Mesh(new THREE.CylinderGeometry(r2,r1,1,28),mat);setSeg(m,a,b);parent.add(m);return m;}
+function anchor(parent,x,y,z){const o=new THREE.Object3D();o.position.set(x,y,z);parent.add(o);return o;}
+// ventre muscular (fusiforme)
+const spPts=[];for(let i=0;i<=20;i++){const s=i/20;spPts.push(new THREE.Vector2(0.16+0.84*Math.pow(Math.sin(Math.PI*Math.pow(s,0.92)),0.85),s-0.5));}
+const SPIN=new THREE.LatheGeometry(spPts,28);
+
+/* ---------- ossos: superfície implícita reconstruída (como uma TC) ---------- */
+const sq=Math.sqrt, mx=Math.max, mn=Math.min;
+function sstep(a,b,x){const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);}
+function sdSph(x,y,z,cx,cy,cz,r){x-=cx;y-=cy;z-=cz;return sq(x*x+y*y+z*z)-r;}
+function sdEll(x,y,z,cx,cy,cz,rx,ry,rz){x-=cx;y-=cy;z-=cz;const a=x/rx,b=y/ry,c=z/rz,k0=sq(a*a+b*b+c*c),a2=a/rx,b2=b/ry,c2=c/rz,k1=sq(a2*a2+b2*b2+c2*c2)+1e-9;return k0*(k0-1)/k1;}
+function sdCap(x,y,z,a,b,r1,r2){const bx=b[0]-a[0],by=b[1]-a[1],bz=b[2]-a[2],px=x-a[0],py=y-a[1],pz=z-a[2];let t=(px*bx+py*by+pz*bz)/(bx*bx+by*by+bz*bz);t=t<0?0:t>1?1:t;const dx=px-bx*t,dy=py-by*t,dz=pz-bz*t;return sq(dx*dx+dy*dy+dz*dz)-(r1+(r2-r1)*t);}
+function smin(a,b,k){const h=mx(k-Math.abs(a-b),0)/k;return mn(a,b)-h*h*k*0.25;}
+function ssub(a,b,k){return -smin(-a,b,k);}
+function hsh(i,j,k){let n=(Math.imul(i,374761393)+Math.imul(j,668265263)+Math.imul(k,1274126177))|0;n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967295;}
+function vnoise(x,y,z){const i=Math.floor(x),j=Math.floor(y),k=Math.floor(z);let fx=x-i,fy=y-j,fz=z-k;fx=fx*fx*(3-2*fx);fy=fy*fy*(3-2*fy);fz=fz*fz*(3-2*fz);
+  const a=hsh(i,j,k),b=hsh(i+1,j,k),c=hsh(i,j+1,k),d=hsh(i+1,j+1,k),e=hsh(i,j,k+1),f=hsh(i+1,j,k+1),g=hsh(i,j+1,k+1),h=hsh(i+1,j+1,k+1);
+  const x1=a+(b-a)*fx,x2=c+(d-c)*fx,x3=e+(f-e)*fx,x4=g+(h-g)*fx,y1=x1+(x2-x1)*fy,y2=x3+(x4-x3)*fy;return y1+(y2-y1)*fz;}
+function detail(base,amp){return function(x,y,z){const d=base(x,y,z);if(d>0.025||d<-0.025)return d;
+  return d+amp*((vnoise(x*9,y*9,z*9)-0.5)*0.9+(vnoise(x*34+7.3,y*34,z*34)-0.5)*0.6);};}
+
+// malha por "surface nets" + normais pelo gradiente + oclusão ambiente nos vértices
+function buildMesh(f,b0,b1,h,col){
+  const nx=Math.ceil((b1[0]-b0[0])/h)+1,ny=Math.ceil((b1[1]-b0[1])/h)+1,nz=Math.ceil((b1[2]-b0[2])/h)+1;
+  const N=nx*ny*nz,G=new Float32Array(N);let p=0;
+  // passo grosso: só avalia com precisão perto da superfície
+  const S=3,cx0=Math.ceil((nx-1)/S)+1,cy0=Math.ceil((ny-1)/S)+1,cz0=Math.ceil((nz-1)/S)+1,C=new Float32Array(cx0*cy0*cz0);let cp=0;
+  for(let k=0;k<cz0;k++)for(let j=0;j<cy0;j++)for(let i=0;i<cx0;i++)C[cp++]=f(b0[0]+i*S*h,b0[1]+j*S*h,b0[2]+k*S*h);
+  const lim=5*h;
+  for(let k=0;k<nz;k++){const z=b0[2]+k*h,ck=Math.round(k/S);for(let j=0;j<ny;j++){const y=b0[1]+j*h,cj=Math.round(j/S);for(let i=0;i<nx;i++){
+    const dc=C[Math.round(i/S)+cx0*(cj+cy0*ck)];G[p++]=(dc>lim||dc<-lim)?dc:f(b0[0]+i*h,y,z);}}}
+  const sy=nx,sz=nx*ny,VI=new Int32Array(N).fill(-1),pos=[];
+  const co=[0,1,sy,1+sy,sz,1+sz,sy+sz,1+sy+sz],cx=[0,1,0,1,0,1,0,1],cy=[0,0,1,1,0,0,1,1],cz=[0,0,0,0,1,1,1,1];
+  const E=[0,1,2,3,4,5,6,7,0,2,1,3,4,6,5,7,0,4,1,5,2,6,3,7],v=new Float32Array(8);
+  for(let k=0;k<nz-1;k++)for(let j=0;j<ny-1;j++)for(let i=0;i<nx-1;i++){
+    const base=i+sy*j+sz*k;let m=0;
+    for(let c=0;c<8;c++){v[c]=G[base+co[c]];if(v[c]<0)m|=1<<c;}
+    if(m===0||m===255)continue;
+    let ax=0,ay=0,az=0,n=0;
+    for(let e=0;e<24;e+=2){const a=E[e],b=E[e+1];if((v[a]<0)!==(v[b]<0)){const t=v[a]/(v[a]-v[b]);ax+=cx[a]+t*(cx[b]-cx[a]);ay+=cy[a]+t*(cy[b]-cy[a]);az+=cz[a]+t*(cz[b]-cz[a]);n++;}}
+    VI[base]=pos.length/3;pos.push(b0[0]+(i+ax/n)*h,b0[1]+(j+ay/n)*h,b0[2]+(k+az/n)*h);
+  }
+  const idx=[];
+  function quad(a,b,c,d,fl){if(a<0||b<0||c<0||d<0)return;if(fl)idx.push(a,b,c,a,c,d);else idx.push(a,c,b,a,d,c);}
+  for(let k=1;k<nz-1;k++)for(let j=1;j<ny-1;j++)for(let i=1;i<nx-1;i++){
+    const base=i+sy*j+sz*k,s0=G[base]<0;
+    if(s0!==(G[base+1]<0))quad(VI[base-sy-sz],VI[base-sz],VI[base],VI[base-sy],s0);
+    if(s0!==(G[base+sy]<0))quad(VI[base-1-sz],VI[base-1],VI[base],VI[base-sz],s0);
+    if(s0!==(G[base+sz]<0))quad(VI[base-1-sy],VI[base-sy],VI[base],VI[base-1],s0);
+  }
+  const nv=pos.length/3,P3=new Float32Array(pos),NR=new Float32Array(nv*3),CL=new Float32Array(nv*3);
+  const e=h*0.5,lo=[0.30,0.21,0.13],hi=col||[0.94,0.885,0.77];
+  for(let q=0;q<nv;q++){
+    let x=P3[3*q],y=P3[3*q+1],z=P3[3*q+2],gx=0,gy=0,gz=0;
+    const d=f(x,y,z);
+    gx=f(x+e,y,z)-f(x-e,y,z);gy=f(x,y+e,z)-f(x,y-e,z);gz=f(x,y,z+e)-f(x,y,z-e);
+    const gl=sq(gx*gx+gy*gy+gz*gz)||1;gx/=gl;gy/=gl;gz/=gl;
+    x-=gx*d;y-=gy*d;z-=gz*d;
+    P3[3*q]=x;P3[3*q+1]=y;P3[3*q+2]=z;NR[3*q]=gx;NR[3*q+1]=gy;NR[3*q+2]=gz;
+    let occ=0;const ds=[0.02,0.05,0.11],ws=[0.5,0.35,0.25];
+    for(let s=0;s<3;s++){const dd=ds[s];occ+=mx(0,dd-f(x+gx*dd,y+gy*dd,z+gz*dd))/dd*ws[s];}
+    const ao=Math.pow(mx(0,mn(1,1-occ*0.95)),1.3);
+    const sp=0.9+0.1*vnoise(x*70,y*70,z*70)+0.04*(vnoise(x*6,y*6,z*6)-0.5);
+    for(let c=0;c<3;c++){const vv=(lo[c]+(hi[c]-lo[c])*ao)*sp;CL[3*q+c]=Math.pow(mn(1,vv),2.2);}
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(P3,3));
+  g.setAttribute('normal',new THREE.BufferAttribute(NR,3));
+  g.setAttribute('color',new THREE.BufferAttribute(CL,3));
+  g.setIndex(idx);g.computeBoundingSphere();
+  return g;
+}
+function boneMesh(g,mat,parent){const m=new THREE.Mesh(g,mat);parent.add(m);return m;}
+// cristas trocleares ajustáveis: cada vértice da crista desliza até a superfície-base
+function makeRidgeMorph(g,fBase){
+  const p=g.attributes.position.array,n=g.attributes.normal.array,nv=p.length/3,L=[],e=0.004;
+  for(let q=0;q<nv;q++){
+    let x=p[3*q],y=p[3*q+1],z=p[3*q+2];const d=fBase(x,y,z);
+    const w=sstep(0.0005,0.004,d);if(w<=0)continue;
+    let gx=fBase(x+e,y,z)-fBase(x-e,y,z),gy=fBase(x,y+e,z)-fBase(x,y-e,z),gz=fBase(x,y,z+e)-fBase(x,y,z-e);
+    const gl=sq(gx*gx+gy*gy+gz*gz)||1;gx/=gl;gy/=gl;gz/=gl;
+    const fx=x-gx*d,fy=y-gy*d,fz=z-gz*d;
+    let bx=fBase(fx+e,fy,fz)-fBase(fx-e,fy,fz),by=fBase(fx,fy+e,fz)-fBase(fx,fy-e,fz),bz=fBase(fx,fy,fz+e)-fBase(fx,fy,fz-e);
+    const bl=sq(bx*bx+by*by+bz*bz)||1;
+    L.push(q,x,y,z,gx*d*w,gy*d*w,gz*d*w,n[3*q],n[3*q+1],n[3*q+2],bx/bl,by/bl,bz/bl,w);
+  }
+  let last=-1;
+  return function(h){
+    if(Math.abs(h-last)<0.0004)return;last=h;
+    const s=1-Math.max(0,Math.min(1,h/HMAX));
+    for(let i=0;i<L.length;i+=14){const q=L[i],w=L[i+13]*s;
+      p[3*q]=L[i+1]-L[i+4]*s;p[3*q+1]=L[i+2]-L[i+5]*s;p[3*q+2]=L[i+3]-L[i+6]*s;
+      let a=L[i+7]*(1-w)+L[i+10]*w,b=L[i+8]*(1-w)+L[i+11]*w,c=L[i+9]*(1-w)+L[i+12]*w;const l=sq(a*a+b*b+c*c)||1;
+      n[3*q]=a/l;n[3*q+1]=b/l;n[3*q+2]=c/l;}
+    g.attributes.position.needsUpdate=true;g.attributes.normal.needsUpdate=true;
+  };
+}
+// tuberosidade tibial móvel (transposição): os vértices da crista acompanham o deslocamento
+function makeTubMorph(g,fTubPart){
+  const p=g.attributes.position.array,nv=p.length/3,L=[];
+  for(let q=0;q<nv;q++){const d=fTubPart(p[3*q],p[3*q+1],p[3*q+2]);const w=1-sstep(0.0,0.045,d);if(w>0)L.push(q,p[3*q],w);}
+  let last=0;
+  return function(dx){
+    if(Math.abs(dx-last)<0.0004)return;last=dx;
+    for(let i=0;i<L.length;i+=3)p[3*L[i]]=L[i+1]+L[i+2]*dx;
+    g.attributes.position.needsUpdate=true;
+  };
+}
+
+const P=0.78; // altura do ponto de osteotomia
+const GH=0.012;
+// fêmur proximal (coordenadas do membro)
+function fProx(x,y,z){
+  let d=sdCap(x,y,z,[0,0.70,0.012],[0.008,1.45,0.035],0.104,0.108);
+  d=smin(d,sdCap(x,y,z,[0.008,1.45,0.035],[0.02,2.2,-0.01],0.108,0.13),0.05);
+  d=smin(d,sdEll(x,y,z,0.02,2.3,-0.02,0.17,0.2,0.15),0.08);
+  d=smin(d,sdCap(x,y,z,[0.05,2.36,-0.02],[0.22,2.5,-0.02],0.09,0.08),0.05);
+  d=smin(d,sdSph(x,y,z,0.27,2.53,-0.02,0.165),0.03);
+  d=smin(d,sdEll(x,y,z,-0.12,2.46,-0.05,0.1,0.17,0.12),0.06);
+  d=smin(d,sdEll(x,y,z,0.12,2.1,-0.08,0.055,0.065,0.05),0.04);
+  d=ssub(d,sdEll(x,y,z,-0.03,2.5,-0.14,0.06,0.09,0.05),0.03);
+  d=ssub(d,sdSph(x,y,z,0.435,2.53,-0.02,0.03),0.01);
+  return d;
+}
+// fêmur distal (coordenadas do membro; a malha é deslocada para o pivô)
+const HMAX=0.115; // altura máxima das cristas trocleares (sulco profundo)
+function fDistBase(x,y,z){
+  let d=sdCap(x,y,z,[0,0.88,0.012],[0,0.5,0.0],0.098,0.13);
+  d=smin(d,sdEll(x,y,z,0,0.38,-0.02,0.21,0.24,0.165),0.08);
+  d=smin(d,sdEll(x,y,z,0.14,0.15,-0.07,0.12,0.17,0.19),0.05);
+  d=smin(d,sdEll(x,y,z,-0.14,0.15,-0.07,0.125,0.17,0.19),0.05);
+  d=smin(d,sdEll(x,y,z,0,0.33,0.07,0.15,0.23,0.08),0.05);
+  d=smin(d,sdEll(x,y,z,0.2,0.22,-0.03,0.05,0.06,0.06),0.04);
+  d=smin(d,sdEll(x,y,z,-0.2,0.22,-0.03,0.05,0.06,0.06),0.04);
+  d=ssub(d,sdEll(x,y,z,0,0.06,-0.12,0.045,0.11,0.17),0.02);
+  return mn(d,sdSph(x,y,z,0.13,0.31,-0.215,0.035),sdSph(x,y,z,-0.13,0.31,-0.215,0.035));
+}
+function fDist(x,y,z){
+  const r=mn(sdEll(x,y,z,0.095,0.34,0.147,0.055,0.2,0.1),sdEll(x,y,z,-0.095,0.34,0.147,0.055,0.2,0.1));
+  return smin(fDistBase(x,y,z),r,0.04);
+}
+// tíbia e fíbula (coordenadas locais da tíbia)
+function fTibBase(x,y,z){
+  let d=sdEll(x,y,z,0,-0.235,-0.03,0.27,0.08,0.2);
+  d=smin(d,sdEll(x,y,z,0.12,-0.25,-0.04,0.145,0.09,0.18),0.04);
+  d=smin(d,sdEll(x,y,z,-0.12,-0.25,-0.04,0.145,0.09,0.18),0.04);
+  d=smin(d,sdEll(x,y,z,0.03,-0.175,-0.01,0.03,0.035,0.03),0.02);
+  d=smin(d,sdEll(x,y,z,-0.03,-0.175,-0.01,0.03,0.035,0.03),0.02);
+  d=smin(d,sdEll(x,y,z,0,-0.4,-0.02,0.23,0.2,0.18),0.09);
+  d=smin(d,sdEll(x,y,z,0,-0.62,0.0,0.14,0.2,0.135),0.1);
+  d=smin(d,sdCap(x,y,z,[0,-0.6,0.01],[0,-1.45,-0.01],0.105,0.08),0.06);
+  d=smin(d,sdCap(x,y,z,[0,-1.45,-0.01],[0.01,-2.2,-0.02],0.08,0.092),0.04);
+  d=smin(d,sdEll(x,y,z,0.01,-2.28,-0.02,0.14,0.085,0.12),0.05);
+  d=smin(d,sdSph(x,y,z,0.12,-2.35,-0.01,0.052),0.03);
+  let fb=sdCap(x,y,z,[-0.22,-0.36,-0.09],[-0.17,-1.2,-0.07],0.04,0.028);
+  fb=smin(fb,sdCap(x,y,z,[-0.17,-1.2,-0.07],[-0.15,-2.26,-0.06],0.028,0.032),0.02);
+  fb=smin(fb,sdEll(x,y,z,-0.22,-0.33,-0.09,0.065,0.075,0.065),0.03);
+  fb=smin(fb,sdEll(x,y,z,-0.155,-2.33,-0.05,0.055,0.075,0.055),0.03);
+  return smin(d,fb,0.025);
+}
+function fTubL(x,y,z){return smin(sdEll(x,y,z,0,-0.4,0.165,0.075,0.1,0.075),sdCap(x,y,z,[0,-0.45,0.165],[0,-0.9,0.1],0.05,0.022),0.05);}
+function fTib(x,y,z){return smin(fTibBase(x,y,z),fTubL(x,y,z),0.05);}
+const DIG=[-0.1,-0.035,0.035,0.1].map(function(x0,i){const len=(i===0||i===3)?0.52:0.6,b=[x0*1.22,-2.6-len,0.08];
+  return{a:[x0,-2.6,0.02],b:b,p1a:[b[0]*1.02,b[1]-0.045,b[2]+0.055],p1b:[b[0]*1.05,b[1]-0.085,b[2]+0.15],
+    p2a:[b[0]*1.055,b[1]-0.095,b[2]+0.17],p2b:[b[0]*1.07,b[1]-0.115,b[2]+0.235],p3a:[b[0]*1.075,b[1]-0.12,b[2]+0.25],p3b:[b[0]*1.08,b[1]-0.165,b[2]+0.32]};});
+function fPaw(x,y,z){
+  let d=sdCap(x,y,z,[0,-2.36,-0.06],[0,-2.16,-0.3],0.07,0.06);
+  d=smin(d,sdEll(x,y,z,0,-2.14,-0.32,0.07,0.075,0.07),0.03);
+  d=smin(d,sdEll(x,y,z,0,-2.43,0,0.15,0.085,0.125),0.05);
+  d=mn(d,sdEll(x,y,z,0.06,-2.54,0.015,0.075,0.055,0.09),sdEll(x,y,z,-0.06,-2.54,0.015,0.075,0.055,0.09));
+  for(let i=0;i<4;i++){const q=DIG[i];
+    d=mn(d,smin(sdCap(x,y,z,q.a,q.b,0.042,0.034),sdSph(x,y,z,q.b[0],q.b[1],q.b[2],0.045),0.025),
+      smin(sdCap(x,y,z,q.p1a,q.p1b,0.034,0.027),sdSph(x,y,z,q.p1b[0],q.p1b[1],q.p1b[2],0.03),0.012),
+      sdCap(x,y,z,q.p2a,q.p2b,0.027,0.022),sdCap(x,y,z,q.p3a,q.p3b,0.022,0.004));}
+  return d;
+}
+function fPat(x,y,z){return smin(sdEll(x,y,z,0,0.012,0,0.075,0.1,0.05),sdEll(x,y,z,0,-0.06,0.006,0.045,0.06,0.038),0.03);}
+
+const limb=new THREE.Group();scene.add(limb);
+boneMesh(buildMesh(detail(fProx,0.0035),[-0.3,0.55,-0.26],[0.52,2.76,0.22],GH),M.bone,limb);
+const Qa=anchor(limb,0,2.0,0.17);
+const aFemur=anchor(limb,0.12,1.55,0.05);
+
+// fêmur distal (gira no varo)
+const varusG=new THREE.Group();varusG.position.set(0,P,0);limb.add(varusG);
+const fDistL=detail(function(x,y,z){return fDist(x,y+P,z);},0.0035);
+const gDist=buildMesh(fDistL,[-0.35,-0.1-P,-0.31],[0.35,1.02-P,0.29],GH);
+boneMesh(gDist,M.bone,varusG);
+const setRidge=makeRidgeMorph(gDist,detail(function(x,y,z){return fDistBase(x,y+P,z);},0.0035));
+const bandA=anchor(varusG,-0.27,-P+0.22,0.0);
+const aMed=anchor(varusG,0.62,-P+0.3,0.1);
+const aLat=anchor(varusG,-0.62,-P+0.3,0.1);
+
+// tróclea e patela
+const troch=new THREE.Group();troch.position.set(0,-P+0.34,0.1);varusG.add(troch);
+ell(0.07,0.2,0.03,M.cart,0,0,0.028,troch);
+const aTroch=anchor(troch,-0.13,0.17,0.1);
+const patella=boneMesh(buildMesh(detail(fPat,0.002),[-0.1,-0.14,-0.08],[0.1,0.13,0.08],0.006),M.pat,troch);
+patella.position.set(0,0.1,0.1);
+const patTop=anchor(patella,0,0.1,0), patBot=anchor(patella,0,-0.1,0), patLat=anchor(patella,-0.075,0,0);
+
+// tíbia
+const tibFlex=new THREE.Group();tibFlex.position.set(0,-P+0.14,-0.06);varusG.add(tibFlex);
+const tibTor=new THREE.Group();tibFlex.add(tibTor);
+const gTib=buildMesh(detail(fTib,0.0035),[-0.31,-2.46,-0.27],[0.31,-0.13,0.28],GH);
+boneMesh(gTib,M.bone,tibTor);
+const setTub=makeTubMorph(gTib,fTubL);
+boneMesh(buildMesh(detail(fPaw,0.0025),[-0.21,-3.48,-0.44],[0.21,-2.04,0.48],0.011),M.bone,tibTor);
+const aTibia=anchor(tibTor,-0.12,-1.35,0.02);
+const tubG=new THREE.Group();tubG.position.set(0,-0.4,0.16);tibTor.add(tubG);
+const tubAttach=anchor(tubG,0,0.05,0.05);
+const pinMesh=seg(new V(0.0,0.03,0.12),new V(0.0,-0.07,-0.22),0.013,0.013,M.pin,tubG);
+const pin2=seg(new V(0.0,-0.14,0.1),new V(0.0,-0.22,-0.2),0.013,0.013,M.pin,tubG);
+
+// tecidos moles (coordenadas de mundo)
+const quad=new THREE.Mesh(SPIN,M.quad);quad.renderOrder=9;scene.add(quad);
+const lig=seg(new V(),UP,0.026,0.03,M.tendon,scene);
+const band=seg(new V(),UP,0.02,0.02,M.band,scene);
+
+// musculatura completa (opcional)
+const MUS=[
+  {nm:'Reto femoral',o:[limb,0.06,2.72,0.12],i:[patella,0,0.09,0.01],r:0.075,lb:'Quadríceps',s:'l'},
+  {nm:'Vasto lateral',o:[limb,-0.15,2.25,0.02],i:[patella,-0.045,0.07,0],r:0.115},
+  {nm:'Vasto medial',o:[limb,0.15,1.95,0.0],i:[patella,0.045,0.07,0],r:0.1},
+  {nm:'Sartório',o:[limb,0.1,2.85,0.22],i:[tibTor,0.13,-0.5,0.07],r:0.05,lb:'Sartório',s:'r',tint:0xffe0d8},
+  {nm:'Bíceps femoral',o:[limb,-0.08,2.75,-0.32],i:[tibTor,-0.15,-0.55,0.08],r:0.14,lb:'Bíceps femoral',s:'l'},
+  {nm:'Semitendinoso',o:[limb,0.02,2.7,-0.4],i:[tibTor,0.13,-0.75,0.0],r:0.08},
+  {nm:'Grácil',o:[limb,0.22,2.4,-0.2],i:[tibTor,0.15,-0.4,-0.06],r:0.065,tint:0xffe0d8},
+  {nm:'Adutor',o:[limb,0.25,2.3,-0.05],i:[varusG,0.15,-P+0.62,-0.06],r:0.09},
+  {nm:'Gastrocnêmio lateral',o:[varusG,-0.13,-P+0.32,-0.2],i:[tibTor,-0.01,-2.12,-0.33],r:0.1,lb:'Gastrocnêmio',s:'l'},
+  {nm:'Gastrocnêmio medial',o:[varusG,0.13,-P+0.32,-0.2],i:[tibTor,0.01,-2.12,-0.33],r:0.1},
+  {nm:'Tibial cranial',o:[tibTor,-0.07,-0.4,0.13],i:[tibTor,0.06,-2.5,0.1],r:0.075,lb:'Tibial cranial',s:'r'}
+];
+MUS.forEach(function(mu){
+  mu.oa=anchor(mu.o[0],mu.o[1],mu.o[2],mu.o[3]);mu.ia=anchor(mu.i[0],mu.i[1],mu.i[2],mu.i[3]);
+  mu.mat=new THREE.MeshStandardMaterial({map:FIB,color:mu.tint||0xffffff,roughness:0.5,transparent:true,opacity:0,depthWrite:false});
+  mu.mesh=new THREE.Mesh(SPIN,mu.mat);mu.mesh.renderOrder=12;mu.mesh.visible=false;scene.add(mu.mesh);
+  mu.wo=new V();mu.wi=new V();
+});
+
+
+// implantes
+const plateG=new THREE.Group();limb.add(plateG);
+const plateMesh=new THREE.Mesh(new THREE.BoxGeometry(0.03,0.95,0.11),M.plate);plateMesh.position.set(-0.14,P,0.0);plateG.add(plateMesh);
+[-0.4,-0.26,-0.12,0.14,0.28,0.42].forEach(function(dy){
+  const s=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.03,16),M.plate);
+  s.rotation.z=Math.PI/2;s.position.set(-0.16,P+dy,0);plateG.add(s);
+});
+let wedge=null;
+function buildWedge(deg){
+  if(wedge){limb.remove(wedge);wedge.geometry.dispose();}
+  const h=Math.tan(Math.max(4,deg)*D2R)*0.28;
+  const s=new THREE.Shape();s.moveTo(0.15,0);s.lineTo(-0.15,h/2);s.lineTo(-0.15,-h/2);s.closePath();
+  const g=new THREE.ExtrudeGeometry(s,{depth:0.3,bevelEnabled:false});g.translate(0,0,-0.15);
+  wedge=new THREE.Mesh(g,M.wedge);wedge.position.set(0,P,0);wedge.renderOrder=5;limb.add(wedge);
+}
+
+// seta de pressão manual
+const arMat=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xbfe8ff,emissiveIntensity:0.6,transparent:true,opacity:0,depthTest:false});
+const arrow=new THREE.Group();
+const arShaft=new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.018,0.2,12),arMat);arShaft.rotation.z=-Math.PI/2;arShaft.position.x=-0.1;
+const arTip=new THREE.Mesh(new THREE.ConeGeometry(0.048,0.09,18),arMat);arTip.rotation.z=-Math.PI/2;arTip.position.x=0.045;
+arShaft.renderOrder=arTip.renderOrder=30;arrow.add(arShaft,arTip);troch.add(arrow);
+
+// linhas de eixo
+function mkLine(mat){const g=new THREE.BufferGeometry().setFromPoints([new V(),new V(0,1,0)]);const l=new THREE.Line(g,mat);l.frustumCulled=false;l.renderOrder=25;scene.add(l);return l;}
+const forceMat=new THREE.LineBasicMaterial({color:0xff5a4f,transparent:true,opacity:0,depthTest:false});
+const idealMat=new THREE.LineDashedMaterial({color:0x5fe09c,dashSize:0.06,gapSize:0.045,transparent:true,opacity:0,depthTest:false});
+const forceLine=mkLine(forceMat), idealLine=mkLine(idealMat);
+function setLine(l,a,b,dashed){const p=l.geometry.attributes.position;p.setXYZ(0,a.x,a.y,a.z);p.setXYZ(1,b.x,b.y,b.z);p.needsUpdate=true;if(dashed)l.computeLineDistances();}
+
+/* ---------- estado ---------- */
+const cur={mus:0,varus:0,tors:0,ridge:0.07,tubCorr:0,plate:0,pin:0,band:0,wedge:0,flex:10,off:0,lines:0,glow:0,arrow:0};
+const tgt=Object.assign({},cur);
+const RATE={mus:4,varus:2.6,tors:2.6,ridge:2.5,tubCorr:2.6,plate:3,pin:3,band:3,wedge:4,flex:3.2,off:7,lines:3,glow:3,arrow:6};
+let showMus=false, mode='anat', grade=1, gt0=0, clock=0, moving=true, showNames=true, arrowDir=1, luxLatched=false;
+let physRaw=0, physThr=0.1;
+
+const smooth=function(a,b,x){const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
+const q=new V(),t=new V(),g=new V(),w1=new V(),w2=new V(),tmp=new V();
+
+function applyPose(){
+  varusG.rotation.z=cur.varus*D2R;
+  tibFlex.rotation.x=cur.flex*D2R;
+  tibTor.rotation.y=cur.tors*D2R;
+  tubG.position.x=0.006*cur.tors-cur.tubCorr;
+  setTub(tubG.position.x);
+  setRidge(cur.ridge);
+  M.plate.opacity=cur.plate;plateG.visible=cur.plate>0.01;
+  M.pin.opacity=cur.pin;pinMesh.visible=pin2.visible=cur.pin>0.01;
+  M.band.opacity=cur.band*0.85;
+  M.wedge.opacity=cur.wedge*0.75;if(wedge)wedge.visible=cur.wedge>0.01;
+  M.cart.emissive.setRGB(0.12*cur.glow,0.3*cur.glow,0.42*cur.glow);
+  limb.updateMatrixWorld(true);
+}
+function misalign(){
+  Qa.getWorldPosition(q);tubAttach.getWorldPosition(t);troch.getWorldPosition(g);
+  const k=(q.y-g.y)/(q.y-t.y);
+  return (q.x+(t.x-q.x)*k)-g.x;
+}
+function physOff(){
+  const raw=misalign()*1.6;
+  const thr=0.05+cur.ridge*1.2+cur.band*0.035;
+  physRaw=raw;physThr=thr;
+  const a=Math.abs(raw);
+  if(a>thr||(luxLatched&&a>thr*0.85)){luxLatched=true;return Math.sign(raw)*0.235;}
+  luxLatched=false;return raw*0.45;
+}
+function placePatella(){
+  const slide=0.1-(cur.flex/90)*0.2;
+  const a=Math.abs(cur.off), tip=0.032+1.35*cur.ridge, top=Math.max(0.1,tip+0.05);
+  let z;
+  if(a<=0.095)z=0.1+(top-0.1)*smooth(0.015,0.095,a);
+  else{const s=smooth(0.095,0.23,a);z=top*(1-s)+0.035*s;}
+  patella.position.set(cur.off,slide,z);
+  patella.rotation.set(0,cur.off*1.8,0);
+  // seta
+  arMat.opacity=cur.arrow;arrow.visible=cur.arrow>0.01;
+  const poke=reduceMotion?0:Math.sin(clock*9)*0.012;
+  if(arrowDir>0){arrow.rotation.y=0;arrow.position.set(cur.off-0.175+poke,slide,z+0.03);}
+  else{arrow.rotation.y=Math.PI;arrow.position.set(cur.off+0.175-poke,slide,z+0.03);}
+}
+function updateSoft(){
+  limb.updateMatrixWorld(true);
+  patTop.getWorldPosition(w1);Qa.getWorldPosition(q);setSeg(quad,w1,q);quad.scale.x=0.09;quad.scale.z=0.075;
+  M.quad.opacity=0.72*(1-cur.mus);quad.visible=M.quad.opacity>0.02;
+  MUS.forEach(function(mu){
+    mu.mat.opacity=0.8*cur.mus;mu.mesh.visible=cur.mus>0.02;if(!mu.mesh.visible)return;
+    mu.oa.getWorldPosition(mu.wo);mu.ia.getWorldPosition(mu.wi);setSeg(mu.mesh,mu.wo,mu.wi);mu.mesh.scale.x=mu.r;mu.mesh.scale.z=mu.r*0.8;
+  });
+  patBot.getWorldPosition(w1);tubAttach.getWorldPosition(t);setSeg(lig,w1,t);lig.scale.x=1.7;lig.scale.z=0.65;
+  bandA.getWorldPosition(w1);patLat.getWorldPosition(w2);setSeg(band,w1,w2);band.visible=cur.band>0.01;
+  // linhas
+  forceMat.opacity=idealMat.opacity=cur.lines*0.95;
+  forceLine.visible=idealLine.visible=cur.lines>0.01;
+  troch.getWorldPosition(g);
+  setLine(forceLine,q,t,false);
+  const k=(q.y-t.y)/(q.y-g.y);
+  w2.copy(g).sub(q).multiplyScalar(k).add(q);
+  setLine(idealLine,q,w2,true);
+}
+
+/* ---------- roteiros por grau ---------- */
+const GB=[[0,0,0.07],[2,3,0.06],[5,8,0.045],[9,14,0.025],[15,22,0.005]];
+function gradeScript(gr,tt){
+  let p;
+  switch(gr){
+    case 0:{const f=35-35*Math.cos(tt*2*Math.PI/4.5);return{off:0,flex:f,arrow:0,cap:'Joelho normal: a patela desliza dentro do sulco em todos os movimentos.'};}
+    case 1:p=tt%5.5;
+      if(p<1.6)return{off:0,flex:12,arrow:0,cap:'Grau I: em repouso, a patela está no lugar.'};
+      if(p<3.2)return{off:0.235,flex:12,arrow:1,cap:'Empurrando com a mão, ela sai do sulco…'};
+      return{off:0,flex:12,arrow:0,cap:'…e volta sozinha assim que é solta.'};
+    case 2:p=tt%8;
+      if(p<1.5)return{off:0,flex:10,arrow:0,cap:'Grau II: na maior parte do tempo, a patela está no lugar.'};
+      if(p<3){const f=10+65*smooth(1.5,3,p);return{off:f>50?0.235:0,flex:f,arrow:0,cap:'Em alguns movimentos, ela escapa sozinha…'};}
+      if(p<5)return{off:0.235,flex:75,arrow:0,cap:'…e o pet levanta a pata por alguns passos, o famoso "pulinho".'};
+      if(p<6.5){const f=75-65*smooth(5,6.5,p);return{off:f<25?0:0.235,flex:f,arrow:0,cap:'Ao esticar a perna, ela volta para o sulco.'};}
+      return{off:0,flex:10,arrow:0,cap:'Ao esticar a perna, ela volta para o sulco.'};
+    case 3:p=tt%6.5;
+      if(p<1.8)return{off:0.235,flex:18,arrow:0,cap:'Grau III: a patela fica fora do sulco a maior parte do tempo.'};
+      if(p<3.6)return{off:0,flex:18,arrow:-1,cap:'Dá para recolocá-la com a mão…'};
+      if(p<5)return{off:0.235,flex:18,arrow:0,cap:'…mas ela sai de novo assim que é solta.'};
+      return{off:0.235,flex:18,arrow:0,cap:'Grau III: a patela fica fora do sulco a maior parte do tempo.'};
+    case 4:p=tt%6.5;
+      if(p<1.8)return{off:0.25,flex:42,arrow:0,cap:'Grau IV: fora do sulco o tempo todo; o pet anda agachado.'};
+      if(p<3.6)return{off:0.19,flex:42,arrow:-1,cap:'Mesmo empurrando, ela não volta para o sulco.'};
+      return{off:0.25,flex:42,arrow:0,cap:'Os ossos já estão desviados e o sulco é quase plano.'};
+  }
+}
+const GTXT=[
+  {t:'Joelho normal',a:'A patela desliza para cima e para baixo dentro do sulco, sempre alinhada com o músculo e o ligamento.',s:'Andar e correr sem falhas.',c:'Nenhum tratamento necessário.'},
+  {t:'Grau I',a:'A patela fica no sulco. Só sai se for empurrada com a mão durante o exame e volta sozinha assim que é solta.',s:'Geralmente nenhum. Costuma ser descoberta em consulta de rotina.',c:'Acompanhamento, controle de peso e fortalecimento muscular. Cirurgia raramente é necessária.'},
+  {t:'Grau II',a:'A patela sai do sulco sozinha em alguns movimentos e volta quando o pet estica a perna ou quando é manipulada.',s:'O "pulinho": o pet corre, levanta a pata traseira por alguns passos e depois volta a apoiar normalmente.',c:'Depende da frequência e do desconforto. Com episódios frequentes ou dor, a cirurgia costuma ser indicada para evitar desgaste da cartilagem e lesão do ligamento cruzado.'},
+  {t:'Grau III',a:'A patela fica fora do sulco a maior parte do tempo. Dá para recolocá-la com a mão, mas ela sai de novo assim que é solta.',s:'Manqueira frequente, joelho dobrado ao andar, pata virada para dentro.',c:'Cirurgia geralmente indicada, muitas vezes combinando mais de uma técnica.'},
+  {t:'Grau IV',a:'A patela fica fora do sulco o tempo todo e não volta nem com a mão. Os ossos costumam estar tortos e o sulco quase não existe.',s:'Andar agachado, dificuldade para esticar os joelhos, às vezes nos dois membros.',c:'Cirurgia indicada, geralmente com correção dos ossos (osteotomias). Quanto mais cedo, melhor, principalmente em filhotes em crescimento.'}
+];
+const gcard=document.getElementById('gcard');
+function setGrade(gr){
+  grade=gr;gt0=clock;
+  const b=GB[gr];tgt.varus=b[0];tgt.tors=b[1];tgt.ridge=b[2];
+  const d=GTXT[gr];
+  gcard.innerHTML='<h3>'+d.t+'</h3><dl><dt>O que acontece</dt><dd>'+d.a+'</dd><dt>O que você pode notar</dt><dd>'+d.s+'</dd><dt>Tratamento mais comum</dt><dd>'+d.c+'</dd></dl>';
+  document.querySelectorAll('#grades button').forEach(function(x){x.setAttribute('aria-pressed',String(+x.dataset.g===gr));});
+}
+document.querySelectorAll('#grades button').forEach(function(x){x.addEventListener('click',function(){setGrade(+x.dataset.g);});});
+
+/* ---------- desvios ---------- */
+const sVarus=document.getElementById('sVarus'),sTors=document.getElementById('sTors');
+const oVarus=document.getElementById('oVarus'),oTors=document.getElementById('oTors');
+let depth=0.07;
+function readSliders(){
+  tgt.varus=+sVarus.value;tgt.tors=+sTors.value;tgt.ridge=depth;
+  oVarus.textContent=sVarus.value+'°';oTors.textContent=sTors.value+'°';
+}
+sVarus.addEventListener('input',readSliders);sTors.addEventListener('input',readSliders);
+document.querySelectorAll('#segDepth button').forEach(function(x){x.addEventListener('click',function(){
+  depth=+x.dataset.d;document.querySelectorAll('#segDepth button').forEach(function(y){y.setAttribute('aria-pressed',String(y===x));});readSliders();
+});});
+const mFill=document.getElementById('mFill'),mMark=document.getElementById('mMark');
+
+/* ---------- tratamento ---------- */
+const TB={varus:12,tors:16,ridge:0.025};
+let steps={dfo:false,ttt:false,troc:false,tec:false}, timers=[];
+function later(ms,fn){timers.push(setTimeout(fn,ms));}
+function clearTimers(){timers.forEach(clearTimeout);timers=[];}
+function tubCorrFull(){return 0.006*TB.tors+0.21*Math.tan(TB.tors*D2R);}
+function implantsOff(){tgt.plate=0;tgt.pin=0;tgt.band=0;tgt.wedge=0;tgt.tubCorr=0;tgt.glow=0;}
+function renderSteps(){
+  document.querySelectorAll('#steps .step').forEach(function(li){
+    const on=steps[li.dataset.k];li.classList.toggle('on',on);li.querySelector('button').textContent=on?'Desfazer':'Aplicar';
+  });
+}
+function resetTreatment(){
+  clearTimers();steps={dfo:false,ttt:false,troc:false,tec:false};
+  implantsOff();tgt.varus=TB.varus;tgt.tors=TB.tors;tgt.ridge=TB.ridge;renderSteps();
+}
+function toggleStep(k){
+  steps[k]=!steps[k];const on=steps[k];
+  if(k==='dfo'){
+    if(on){buildWedge(TB.varus);tgt.wedge=1;
+      later(1200,function(){if(steps.dfo){tgt.varus=0;tgt.wedge=0;}});
+      later(2100,function(){if(steps.dfo)tgt.plate=1;});}
+    else{tgt.plate=0;tgt.wedge=0;later(400,function(){if(!steps.dfo)tgt.varus=TB.varus;});}
+  }
+  if(k==='ttt'){
+    if(on){tgt.tubCorr=tubCorrFull();later(900,function(){if(steps.ttt)tgt.pin=1;});}
+    else{tgt.pin=0;tgt.tubCorr=0;}
+  }
+  if(k==='troc'){
+    if(on){tgt.ridge=0.085;tgt.glow=1;later(1500,function(){tgt.glow=0;});}
+    else tgt.ridge=TB.ridge;
+  }
+  if(k==='tec')tgt.band=on?1:0;
+  renderSteps();
+}
+document.querySelectorAll('#steps .step button').forEach(function(b){b.addEventListener('click',function(){toggleStep(b.closest('.step').dataset.k);});});
+document.getElementById('btnReset').addEventListener('click',resetTreatment);
+document.getElementById('btnSeq').addEventListener('click',function(){
+  resetTreatment();goView('joelho');
+  later(700,function(){toggleStep('dfo');});
+  later(3600,function(){toggleStep('ttt');});
+  later(5800,function(){toggleStep('troc');});
+  later(7800,function(){toggleStep('tec');});
+});
+
+/* ---------- abas ---------- */
+const captionEl=document.getElementById('caption');
+let lastCap='';
+function setCaption(s){if(s!==lastCap){captionEl.textContent=s;lastCap=s;}}
+function setMode(m){
+  mode=m;clearTimers();luxLatched=false;
+  document.querySelectorAll('[role=tab]').forEach(function(b){b.setAttribute('aria-selected',String(b.dataset.mode===m));});
+  document.querySelectorAll('.pane').forEach(function(p){p.hidden=p.dataset.pane!==m;});
+  tgt.arrow=0;
+  if(m==='anat'){implantsOff();tgt.varus=0;tgt.tors=0;tgt.ridge=0.07;tgt.lines=0;setCaption('');}
+  if(m==='grau'){implantsOff();tgt.lines=0;setGrade(grade);}
+  if(m==='desvio'){implantsOff();tgt.lines=1;readSliders();setCaption('');}
+  if(m==='trat'){tgt.lines=1;resetTreatment();setCaption('');}
+}
+document.querySelectorAll('[role=tab]').forEach(function(b){b.addEventListener('click',function(){setMode(b.dataset.mode);});});
+
+/* ---------- câmera ---------- */
+const VIEWS={
+  joelho:{p:new V(1.9,1.0,4.3),t:new V(0,0.25,0.05)},
+  frente:{p:new V(0,0.35,4.7),t:new V(0,0.25,0.05)},
+  lado:{p:new V(4.6,0.4,0.6),t:new V(0,0.1,0)},
+  membro:{p:new V(3.6,0.6,9.8),t:new V(0,-0.35,0)}
+};
+let camTw=null;
+function goView(n){
+  const v=VIEWS[n];
+  document.querySelectorAll('[data-view]').forEach(function(b){b.classList.toggle('on',b.dataset.view===n);});
+  if(reduceMotion){camera.position.copy(v.p);controls.target.copy(v.t);return;}
+  camTw={k:0,p0:camera.position.clone(),t0:controls.target.clone(),p1:v.p,t1:v.t};
+}
+document.querySelectorAll('[data-view]').forEach(function(b){b.addEventListener('click',function(){goView(b.dataset.view);});});
+const tgNames=document.getElementById('tgNames'),tgMove=document.getElementById('tgMove'),tgMus=document.getElementById('tgMus');
+tgMus.addEventListener('click',function(){showMus=!showMus;tgMus.classList.toggle('on',showMus);tgMus.setAttribute('aria-pressed',String(showMus));});
+tgNames.addEventListener('click',function(){showNames=!showNames;tgNames.classList.toggle('on',showNames);tgNames.setAttribute('aria-pressed',String(showNames));});
+tgMove.addEventListener('click',function(){moving=!moving;tgMove.classList.toggle('on',moving);tgMove.setAttribute('aria-pressed',String(moving));});
+const hint=document.getElementById('hint');
+canvas.addEventListener('pointerdown',function(){hint.style.opacity=0;},{once:true});
+
+/* ---------- rótulos ---------- */
+const labelLayer=document.getElementById('labels');
+const LBL=[
+  {tx:'Fêmur',s:'r',get:function(v){return aFemur.getWorldPosition(v);}},
+  {tx:'Quadríceps',s:'l',get:function(v){patTop.getWorldPosition(v);Qa.getWorldPosition(w1);return v.lerp(w1,0.55);},vis:function(){return cur.mus<0.5;}},
+  {tx:'Sulco troclear',s:'l',get:function(v){return aTroch.getWorldPosition(v);}},
+  {tx:'Patela',s:'r pat',get:function(v){patella.getWorldPosition(v);v.x+=0.06;return v;}},
+  {tx:'Ligamento patelar',s:'r',get:function(v){patBot.getWorldPosition(v);tubAttach.getWorldPosition(w1);return v.lerp(w1,0.5);}},
+  {tx:'Tuberosidade tibial',s:'r',get:function(v){tubAttach.getWorldPosition(v);v.x+=0.05;return v;}},
+  {tx:'Tíbia',s:'l',get:function(v){return aTibia.getWorldPosition(v);}},
+  {tx:'MEDIAL',s:'side',get:function(v){return aMed.getWorldPosition(v);}},
+  {tx:'LATERAL',s:'side',get:function(v){return aLat.getWorldPosition(v);}}
+];
+MUS.forEach(function(mu){if(!mu.lb)return;LBL.push({tx:mu.lb,s:mu.s+' mus',get:function(v){return v.copy(mu.mesh.position);},vis:function(){return cur.mus>0.5;}});});
+LBL.forEach(function(L){const d=document.createElement('div');d.className='tag '+L.s;d.innerHTML='<i></i><span>'+L.tx+'</span>';labelLayer.appendChild(d);L.el=d;});
+function updateLabels(){
+  labelLayer.style.opacity=showNames?1:0;if(!showNames)return;
+  const W=canvas.clientWidth,H=canvas.clientHeight;
+  LBL.forEach(function(L){
+    L.get(tmp);tmp.project(camera);
+    const vis=tmp.z<1&&Math.abs(tmp.x)<1.05&&Math.abs(tmp.y)<1.05&&(!L.vis||L.vis());
+    L.el.style.transform='translate('+((tmp.x*0.5+0.5)*W).toFixed(1)+'px,'+((-tmp.y*0.5+0.5)*H).toFixed(1)+'px)';
+    L.el.style.opacity=vis?1:0;
+  });
+}
+
+/* ---------- status ---------- */
+const statusEl=document.getElementById('status'),statusTx=statusEl.querySelector('span');
+let lastOut=null;
+function updateStatus(){
+  const out=Math.abs(cur.off)>0.12;
+  if(out!==lastOut){lastOut=out;statusEl.classList.toggle('out',out);statusTx.textContent=out?'Patela fora do sulco (luxada)':'Patela no sulco';}
+  if(mode==='desvio'){
+    const f=Math.min(1,Math.abs(physRaw)/0.3);
+    mFill.style.width=(f*100).toFixed(1)+'%';
+    mFill.classList.toggle('out',luxLatched);
+    mMark.style.left=(Math.min(1,physThr/0.3)*100).toFixed(1)+'%';
+  }
+}
+
+/* ---------- tamanho ---------- */
+function resize(){
+  const w=viewer.clientWidth,h=viewer.clientHeight;if(!w||!h)return;
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+}
+if(window.ResizeObserver)new ResizeObserver(resize).observe(viewer);else window.addEventListener('resize',resize);
+resize();
+
+/* ---------- loop ---------- */
+let last=performance.now();
+function damp(k,dt){cur[k]+= (tgt[k]-cur[k])*(1-Math.exp(-RATE[k]*dt));}
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;clock+=dt;
+  if(camTw){camTw.k=Math.min(1,camTw.k+dt/0.9);const e=1-Math.pow(1-camTw.k,3);
+    camera.position.lerpVectors(camTw.p0,camTw.p1,e);controls.target.lerpVectors(camTw.t0,camTw.t1,e);if(camTw.k>=1)camTw=null;}
+  const cyc=function(amp,per){return moving&&!reduceMotion?amp-amp*Math.cos(clock*2*Math.PI/per):8;};
+  if(mode==='grau'){
+    const s=gradeScript(grade,clock-gt0);
+    tgt.off=s.off;tgt.flex=s.flex;tgt.arrow=s.arrow?1:0;if(s.arrow)arrowDir=s.arrow;setCaption(s.cap);
+  }else if(mode==='anat'){tgt.flex=cyc(35,4.5);tgt.off=0;tgt.arrow=0;}
+  else{tgt.flex=cyc(22,5);tgt.arrow=0;}
+  tgt.mus=showMus?1:0;
+  ['mus','varus','tors','ridge','tubCorr','plate','pin','band','wedge','flex','lines','glow','arrow'].forEach(function(k){damp(k,dt);});
+  applyPose();
+  if(mode==='desvio'||mode==='trat')tgt.off=physOff();
+  damp('off',dt);
+  placePatella();
+  updateSoft();
+  controls.update();
+  renderer.render(scene,camera);
+  updateLabels();updateStatus();
+  requestAnimationFrame(frame);
+}
+setGrade(1);setMode('anat');
+requestAnimationFrame(frame);
+document.getElementById('loading').classList.add('done');
+},80);
+</script>
+</body>
+</html>
